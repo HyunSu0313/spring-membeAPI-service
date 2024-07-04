@@ -43,14 +43,7 @@ jobs:
         echo "    UserKnownHostsFile=/dev/null" >> ~/.ssh/config
 
     - name: Copy JAR to Bastion Host
-      uses: appleboy/scp-action@v0.1.5
-      with:
-        host: ${{ secrets.BASTION_HOST }}
-        username: ${{ secrets.BASTION_USER }}
-        key: ${{ secrets.SSH_KEY }}
-        port: 22
-        source: "build/libs/member-0.0.1-SNAPSHOT.jar"
-        target: "/tmp/member-0.0.1-SNAPSHOT.jar"
+      run: scp -i ~/.ssh/id_rsa build/libs/member-0.0.1-SNAPSHOT.jar ${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }}:/tmp/member-0.0.1-SNAPSHOT.jar
 
     - name: Transfer JAR from Bastion to Private EC2
       run: |
