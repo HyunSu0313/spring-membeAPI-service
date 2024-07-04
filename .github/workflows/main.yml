@@ -36,6 +36,12 @@ jobs:
     - name: Set SSH key permissions
       run: chmod 600 ~/.ssh/id_rsa
 
+    - name: Add SSH config
+      run: |
+        echo "Host *" > ~/.ssh/config
+        echo "    StrictHostKeyChecking no" >> ~/.ssh/config
+        echo "    UserKnownHostsFile=/dev/null" >> ~/.ssh/config
+
     - name: Copy JAR to Bastion Host
       uses: appleboy/scp-action@v0.1.5
       with:
