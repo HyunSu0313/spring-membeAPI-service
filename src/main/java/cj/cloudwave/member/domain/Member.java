@@ -28,8 +28,8 @@ public class Member {
     @Enumerated(EnumType.STRING)
     private MemberGrade grade;
 
-    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL)
-    private List<Order> orders = new ArrayList<>();
+//    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL)
+//    private List<Order> orders = new ArrayList<>();
 
     private Member(String email, String password, String name, MemberGrade grade) {
         this.email = email;
