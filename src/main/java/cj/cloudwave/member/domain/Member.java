@@ -38,6 +38,11 @@ public class Member {
         this.grade = grade;
     }
 
+    /**
+     * Member 등급은 이메일 도메인으로 판단 (@company.com이 이메일 주소면 ADMIN, 그렇지 않으면 CUSTOMER)
+     * ex) test@test.com -> CUSTOMER
+     * ex) test@company.com -> ADMIN
+     */
     public static Member createMember(String email, String password, String name) {
         MemberGrade grade = email.contains("@company.com") ? MemberGrade.ADMIN : MemberGrade.CUSTOMER;
         return new Member(email, password, name, grade);
