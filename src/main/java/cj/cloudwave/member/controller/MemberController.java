@@ -63,6 +63,7 @@ public class MemberController {
         return ResponseEntity.ok("Logout successful");
     }
 
+    // member 등급(CUSTOMER, ADMIN) 등급 확인
     @GetMapping("/member")
     public ResponseEntity<MemberCheckDto> getMember(HttpSession session) {
         Member member = (Member) session.getAttribute("member");
