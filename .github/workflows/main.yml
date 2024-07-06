@@ -1,66 +1,47 @@
-name: Deploy to AWS EC2
+name: Deploy to AWS ECS
 
 on:
   push:
     branches:
-      - main  # main 브랜치에 푸시할 때마다 실행
+      - main  # main 브랜치에 push될 때 트리거
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - name: Set up JDK 21
-      uses: actions/setup-java@v2
-      with:
-        distribution: 'temurin'
-        java-version: '21'
+      - name: Set up JDK 21
+        uses: actions/setup-java@v2
+        with:
+          java-version: '21'
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
+      - name: Build with Gradle
+        run: ./gradlew build
 
-    - name: Build with Gradle
-      run: ./gradlew build
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+        with:
+          region: ${{ secrets.AWS_REGION }}
 
-    - name: Create SSH directory
-      run: mkdir -p ~/.ssh
+      - name: Build and push Docker image
+        env:
+          ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REPOSITORY_URI:$IMAGE_TAG .
+          docker push $ECR_REPOSITORY_URI:$IMAGE_TAG
 
-    - name: Add SSH key
-      run: echo "${{ secrets.SSH_KEY }}" > ~/.ssh/id_rsa
-      env:
-        SSH_KEY: ${{ secrets.SSH_KEY }}
-
-    - name: Set SSH key permissions
-      run: chmod 600 ~/.ssh/id_rsa
-
-    - name: Add SSH config
-      run: |
-        echo "Host *" > ~/.ssh/config
-        echo "    StrictHostKeyChecking no" >> ~/.ssh/config
-        echo "    UserKnownHostsFile=/dev/null" >> ~/.ssh/config
-
-    - name: Copy JAR to Bastion Host
-      run: |
-        scp -i ~/.ssh/id_rsa build/libs/member-0.0.1-SNAPSHOT.jar ${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }}:/tmp/member-0.0.1-SNAPSHOT.jar
-        ssh -i ~/.ssh/id_rsa ${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }} "ls -l /tmp/member-0.0.1-SNAPSHOT.jar"
-
-    - name: Transfer JAR from Bastion to Private EC2
-      run: |
-        ssh -i ~/.ssh/id_rsa -o "ProxyCommand ssh -i ~/.ssh/id_rsa -W %h:%p ${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }}" ${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }} "scp /tmp/member-0.0.1-SNAPSHOT.jar ${{ secrets.EC2_USER }}@${{ secrets.PRIVATE_EC2_HOST }}:/home/ec2-user/member-0.0.1-SNAPSHOT.jar"
-        ssh -i ~/.ssh/id_rsa ${{ secrets.BASTION_USER }}@${{ secrets.BASTION_HOST }} "rm /tmp/member-0.0.1-SNAPSHOT.jar"
-
-    - name: SSH and Run Application on Private EC2
-      uses: appleboy/ssh-action@v0.1.5
-      with:
-        host: ${{ secrets.PRIVATE_EC2_HOST }}
-        username: ${{ secrets.EC2_USER }}
-        key: ${{ secrets.SSH_KEY }}
-        port: 22
-        script: |
-          export SPRING_DATASOURCE_URL=jdbc:mysql://jhs-db-instance-1.coxwo6u60is7.ap-northeast-2.rds.amazonaws.com:3306/your-database
-          export SPRING_DATASOURCE_USERNAME=admin
-          export SPRING_DATASOURCE_PASSWORD=password
-          nohup java -jar /home/ec2-user/member-0.0.1-SNAPSHOT.jar > /dev/null 2>&1 &
+      - name: Deploy to Amazon ECS
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          ECS_CLUSTER_NAME: ${{ secrets.ECS_CLUSTER_NAME }}
+          ECS_SERVICE_NAME: ${{ secrets.ECS_SERVICE_NAME }}
+          IMAGE_URI: ${{ secrets.ECR_REPOSITORY_URI }}:${{ github.sha }}
+        run: |
+          aws ecs update-service --cluster $ECS_CLUSTER_NAME --service $ECS_SERVICE_NAME --force-new-deployment
