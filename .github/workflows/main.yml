@@ -41,93 +41,16 @@ jobs:
           docker build -t $ECR_REPOSITORY_URI:$IMAGE_TAG .
           docker push $ECR_REPOSITORY_URI:$IMAGE_TAG
 
-      - name: Generate new task definition
-        id: task-def
-        env:
-          IMAGE_URI: ${{ secrets.ECR_REPOSITORY_URI }}:${{ github.sha }}
-          DD_API_KEY: ${{ secrets.DD_API_KEY }}
-        run: |
-          task_definition=$(jq -n \
-            --arg IMAGE_URI "$IMAGE_URI" \
-            --arg DD_API_KEY "$DD_API_KEY" \
-            '{
-              family: "jhs-spring-internallb",
-              containerDefinitions: [
-                {
-                  name: "jhs-member-service",
-                  image: $IMAGE_URI,
-                  essential: true,
-                  portMappings: [
-                    {
-                      containerPort: 8080,
-                      hostPort: 8080,
-                      protocol: "tcp"
-                    }
-                  ],
-                  environment: [
-                    {
-                      name: "DB_URL",
-                      value: "${{ secrets.DB_URL }}"
-                    },
-                    {
-                      name: "DB_USERNAME",
-                      value: "${{ secrets.DB_USERNAME }}"
-                    },
-                    {
-                      name: "DB_PASSWORD",
-                      value: "${{ secrets.DB_PASSWORD }}"
-                    }
-                  ],
-                  logConfiguration: {
-                    logDriver: "awslogs",
-                    options: {
-                      "awslogs-group": "/ecs/jhs-spring-internallb",
-                      "awslogs-region": "ap-northeast-2",
-                      "awslogs-stream-prefix": "ecs"
-                    }
-                  }
-                },
-                {
-                  name: "datadog-agent",
-                  image: "datadog/agent:latest",
-                  essential: false,
-                  environment: [
-                    {
-                      name: "DD_API_KEY",
-                      value: $DD_API_KEY
-                    },
-                    {
-                      name: "ECS_FARGATE",
-                      value: "true"
-                    }
-                  ],
-                  logConfiguration: {
-                    logDriver: "awslogs",
-                    options: {
-                      "awslogs-group": "/ecs/jhs-spring-internallb",
-                      "awslogs-region": "ap-northeast-2",
-                      "awslogs-stream-prefix": "datadog"
-                    }
-                  }
-                }
-              ]
-            }')
-          echo "$task_definition" > task-definition.json
-
-      - name: Register new task definition in ECS
-        run: |
-          aws ecs register-task-definition \
-            --cli-input-json file://task-definition.json
-
-      - name: Update ECS service with new task definition
+      - name: Deploy to Amazon ECS
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           ECS_CLUSTER_NAME: ${{ secrets.ECS_CLUSTER_NAME }}
           ECS_SERVICE_NAME: ${{ secrets.ECS_SERVICE_NAME }}
+          IMAGE_URI: ${{ secrets.ECR_REPOSITORY_URI }}:${{ github.sha }}
+          DB_URL: ${{ secrets.DB_URL }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
-          aws ecs update-service \
-            --cluster $ECS_CLUSTER_NAME \
-            --service $ECS_SERVICE_NAME \
-            --force-new-deployment
+          aws ecs update-service --cluster $ECS_CLUSTER_NAME --service $ECS_SERVICE_NAME --force-new-deployment
