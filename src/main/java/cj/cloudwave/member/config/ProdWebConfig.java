@@ -14,7 +14,7 @@ public class ProdWebConfig implements WebMvcConfigurer {
         registry.addMapping("/**")
                 .allowedOrigins("https://dk7zogewxm14v.cloudfront.net")
                 //.allowedOriginPatterns("https://cloudfront.net")
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedMethods("GET", "POST", "PUT", "DELETE")
                 .allowedHeaders("*")
                 .allowCredentials(true);
     }
