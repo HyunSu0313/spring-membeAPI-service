@@ -25,18 +25,20 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
       - name: Log in to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v1
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}
 
       - name: Build and push Docker image
         env:
           ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
           IMAGE_TAG: ${{ github.sha }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
           docker build -t $ECR_REPOSITORY_URI:$IMAGE_TAG .
           docker push $ECR_REPOSITORY_URI:$IMAGE_TAG
@@ -45,9 +47,7 @@ jobs:
         id: describe-task
         env:
           ECS_TASK_DEFINITION_NAME: ${{ secrets.ECS_TASK_DEFINITION_NAME }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
-          echo "Describing ECS task definition: $ECS_TASK_DEFINITION_NAME"
           aws ecs describe-task-definition --task-definition $ECS_TASK_DEFINITION_NAME > task-definition.json
           cat task-definition.json
 
@@ -63,16 +63,15 @@ jobs:
         run: |
           sed -i 's|"image": ".*"|"image": "$ECR_REPOSITORY_URI:$IMAGE_TAG"|' task-definition.json
           jq '.containerDefinitions[0].environment |= . + [{"name":"DB_URL","value":"'"$DB_URL"'"},{"name":"DB_USERNAME","value":"'"$DB_USERNAME"'"},{"name":"DB_PASSWORD","value":"'"$DB_PASSWORD"'"}]' task-definition.json > new-task-definition.json
+          cat new-task-definition.json
           aws ecs register-task-definition --cli-input-json file://new-task-definition.json
 
       - name: Deploy to Amazon ECS
         env:
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           ECS_CLUSTER_NAME: ${{ secrets.ECS_CLUSTER_NAME }}
           ECS_SERVICE_NAME: ${{ secrets.ECS_SERVICE_NAME }}
           ECS_TASK_DEFINITION_NAME: ${{ secrets.ECS_TASK_DEFINITION_NAME }}
         run: |
           NEW_TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition $ECS_TASK_DEFINITION_NAME --query "taskDefinition.taskDefinitionArn" --output text)
-          aws ecs update-service --cluster $ECS_CLUSTER_NAME --service $ECS_SERVICE_NAME --task-definition $NEW_TASK_DEFINITION --force-new-deployment --region $AWS_REGION
+          echo "New task definition ARN: $NEW_TASK_DEFINITION"
+          aws ecs update-service --cluster $ECS_CLUSTER_NAME --service $ECS_SERVICE_NAME --task-definition $NEW_TASK_DEFINITION --force-new-deployment --region ${{ secrets.AWS_REGION }}
