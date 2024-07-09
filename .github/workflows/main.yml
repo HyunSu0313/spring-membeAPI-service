@@ -49,6 +49,7 @@ jobs:
           ECS_TASK_DEFINITION_NAME: ${{ secrets.ECS_TASK_DEFINITION_NAME }}
         run: |
           aws ecs describe-task-definition --task-definition $ECS_TASK_DEFINITION_NAME > task-definition.json
+          jq '{containerDefinitions, taskRoleArn, executionRoleArn, networkMode, requiresCompatibilities, cpu, memory, runtimePlatform}' task-definition.json
           cat task-definition.json
 
       - name: Update ECS task definition
