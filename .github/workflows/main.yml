@@ -41,6 +41,27 @@ jobs:
           docker build -t $ECR_REPOSITORY_URI:$IMAGE_TAG .
           docker push $ECR_REPOSITORY_URI:$IMAGE_TAG
 
+      - name: Describe ECS task definition
+        id: describe-task
+        env:
+          ECS_TASK_DEFINITION_NAME: ${{ secrets.ECS_TASK_DEFINITION_NAME }}
+        run: |
+          aws ecs describe-task-definition --task-definition $ECS_TASK_DEFINITION_NAME > task-definition.json
+
+      - name: Update ECS task definition
+        id: update-task
+        env:
+          ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
+          IMAGE_TAG: ${{ github.sha }}
+          ECS_TASK_DEFINITION_NAME: ${{ secrets.ECS_TASK_DEFINITION_NAME }}
+          DB_URL: ${{ secrets.DB_URL }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          sed -i 's|"image": ".*"|"image": "$ECR_REPOSITORY_URI:$IMAGE_TAG"|' task-definition.json
+          jq '.containerDefinitions[0].environment |= . + [{"name":"DB_URL","value":"'"$DB_URL"'"},{"name":"DB_USERNAME","value":"'"$DB_USERNAME"'"},{"name":"DB_PASSWORD","value":"'"$DB_PASSWORD"'"}]' task-definition.json > new-task-definition.json
+          aws ecs register-task-definition --cli-input-json file://new-task-definition.json
+
       - name: Deploy to Amazon ECS
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -48,7 +69,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           ECS_CLUSTER_NAME: ${{ secrets.ECS_CLUSTER_NAME }}
           ECS_SERVICE_NAME: ${{ secrets.ECS_SERVICE_NAME }}
-          ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
-          IMAGE_TAG: ${{ github.sha }}
+          ECS_TASK_DEFINITION_NAME: ${{ secrets.ECS_TASK_DEFINITION_NAME }}
         run: |
-          aws ecs update-service --cluster $ECS_CLUSTER_NAME --service $ECS_SERVICE_NAME --force-new-deployment --region $AWS_REGION
+          NEW_TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition $ECS_TASK_DEFINITION_NAME --query "taskDefinition.taskDefinitionArn" --output text)
+          aws ecs update-service --cluster $ECS_CLUSTER_NAME --service $ECS_SERVICE_NAME --task-definition $NEW_TASK_DEFINITION --force-new-deployment --region $AWS_REGION
