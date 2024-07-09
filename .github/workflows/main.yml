@@ -49,8 +49,8 @@ jobs:
           ECS_TASK_DEFINITION_NAME: ${{ secrets.ECS_TASK_DEFINITION_NAME }}
         run: |
           aws ecs describe-task-definition --task-definition $ECS_TASK_DEFINITION_NAME > task-definition.json
-          jq '.taskDefinition | {containerDefinitions, taskRoleArn, executionRoleArn, networkMode, requiresCompatibilities, cpu, memory, runtimePlatform}' task-definition.json
-          cat task-definition.json
+          jq '.taskDefinition | {family, containerDefinitions, taskRoleArn, executionRoleArn, networkMode, requiresCompatibilities, cpu, memory, runtimePlatform}' task-definition.json > filtered-task-definition.json
+          cat filtered-task-definition.json
 
       - name: Update ECS task definition
         env:
@@ -59,13 +59,13 @@ jobs:
           ECS_TASK_DEFINITION_NAME: ${{ secrets.ECS_TASK_DEFINITION_NAME }}
         run: |
           # Update image URI in task-definition.json
-          sed -i 's|"image": ".*"|"image": "'"$ECR_REPOSITORY_URI:$IMAGE_TAG"'"|' task-definition.json
+          sed -i 's|"image": ".*"|"image": "'"$ECR_REPOSITORY_URI:$IMAGE_TAG"'"|' filtered-task-definition.json
 
           # Register the new task definition
-          aws ecs register-task-definition --cli-input-json file://task-definition.json --family jhs-spring-internallb
+          aws ecs register-task-definition --cli-input-json file://filtered-task-definition.json
 
           # Optional: Display the new task definition for verification
-          cat task-definition.json
+          cat filtered-task-definition.json
 
       - name: Deploy to Amazon ECS
         env:
