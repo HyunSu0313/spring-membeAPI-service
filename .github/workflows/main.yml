@@ -56,25 +56,16 @@ jobs:
           ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
           IMAGE_TAG: ${{ github.sha }}
           ECS_TASK_DEFINITION_NAME: ${{ secrets.ECS_TASK_DEFINITION_NAME }}
-          DB_URL: ${{ secrets.DB_URL }}
-          DB_USERNAME: ${{ secrets.DB_USERNAME }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
-          # Replace image URI in task-definition.json
+          # Update image URI in task-definition.json
           sed -i 's|"image": ".*"|"image": "'"$ECR_REPOSITORY_URI:$IMAGE_TAG"'"|' task-definition.json
-            
-          # Add DB environment variables to containerDefinitions[1].environment
-          jq '.containerDefinitions[1].environment += [
-            { "name": "DB_URL", "value": "'"$DB_URL"'" },
-            { "name": "DB_USERNAME", "value": "'"$DB_USERNAME"'" },
-            { "name": "DB_PASSWORD", "value": "'"$DB_PASSWORD"'" }
-          ]' task-definition.json > new-task-definition.json
-            
+
           # Register the new task definition
-          aws ecs register-task-definition --cli-input-json file://new-task-definition.json
-            
+          aws ecs register-task-definition --cli-input-json file://task-definition.json --family jhs-spring-internallb
+
           # Optional: Display the new task definition for verification
-          cat new-task-definition.json
+          cat task-definition.json
+      
 
       - name: Deploy to Amazon ECS
         env:
