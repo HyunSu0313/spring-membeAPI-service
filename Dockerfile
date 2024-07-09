@@ -4,8 +4,6 @@ FROM eclipse-temurin:21-jdk-alpine
 # 작업 디렉터리 설정
 WORKDIR /app
 
-RUN apk add --no-cache curl
-
 # 애플리케이션 JAR 파일 추가
 COPY build/libs/member-0.0.1-SNAPSHOT.jar app.jar
 
