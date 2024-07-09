@@ -58,8 +58,11 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
           ECS_TASK_DEFINITION_NAME: ${{ secrets.ECS_TASK_DEFINITION_NAME }}
         run: |
-          # Update image URI in task-definition.json
-          sed -i 's|"image": ".*"|"image": "'"$ECR_REPOSITORY_URI:$IMAGE_TAG"'"|' filtered-task-definition.json
+          # Update the image URI for both containers
+          jq --arg uri "$ECR_REPOSITORY_URI:$IMAGE_TAG" \
+            '(.containerDefinitions[] | select(.name == "datadog-agent").image) |= $uri |
+             (.containerDefinitions[] | select(.name == "jhs-member-service").image) |= $uri' \
+            filtered-task-definition.json > updated-task-definition.json
 
           # Register the new task definition
           aws ecs register-task-definition --cli-input-json file://filtered-task-definition.json
