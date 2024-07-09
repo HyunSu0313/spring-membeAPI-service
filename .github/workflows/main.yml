@@ -65,7 +65,6 @@ jobs:
 
           # Optional: Display the new task definition for verification
           cat task-definition.json
-      
 
       - name: Deploy to Amazon ECS
         env:
