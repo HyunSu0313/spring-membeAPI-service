@@ -32,15 +32,20 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
       - name: Log in to Amazon ECR
-        run: aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY_URI }}
+        id: ecr-login
+        uses: aws-actions/amazon-ecr-login@v1
 
       - name: Build and push Docker image
         env:
           ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $ECR_REPOSITORY_URI:$IMAGE_TAG .
+          docker-compose build
+          docker tag spring-api $ECR_REPOSITORY_URI:$IMAGE_TAG
           docker push $ECR_REPOSITORY_URI:$IMAGE_TAG
 
       - name: Describe ECS task definition
@@ -58,16 +63,13 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
           ECS_TASK_DEFINITION_NAME: ${{ secrets.ECS_TASK_DEFINITION_NAME }}
         run: |
-          # Update the image URI for jhs-member-service container
-          jq --arg member_service_uri "$ECR_REPOSITORY_URI:$IMAGE_TAG" \
-             '(.containerDefinitions[] | select(.name == "jhs-member-service").image) |= $member_service_uri' \
+          # Update the image URI for the container
+          jq --arg image_uri "$ECR_REPOSITORY_URI:$IMAGE_TAG" \
+             '(.containerDefinitions[] | select(.name == "spring-api").image) |= $image_uri' \
              filtered-task-definition.json > updated-task-definition.json
 
           # Register the new task definition
           aws ecs register-task-definition --cli-input-json file://updated-task-definition.json
-
-          # Optional: Display the new task definition for verification
-          cat updated-task-definition.json
 
       - name: Deploy to Amazon ECS
         env:
