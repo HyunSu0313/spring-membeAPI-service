@@ -11,9 +11,8 @@ public class ProdWebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**")
-                .allowedOrigins("https://d3637pbxa0x9qp.cloudfront.net")
-                //.allowedOriginPatterns("https://cloudfront.net")
+        registry.addMapping("/api/**")
+                .allowedOrigins("*")
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true);
