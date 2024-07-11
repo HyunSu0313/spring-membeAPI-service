@@ -48,6 +48,7 @@ dependencies {
     // Logback dependencies
     implementation 'ch.qos.logback:logback-classic:1.4.12'
     implementation 'ch.qos.logback:logback-core:1.4.14'
+    implementation 'com.datadoghq:java-dogstatsd-client:2.12.2'
 
     //Querydsl 추가
     implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
