@@ -11,4 +11,4 @@ COPY build/libs/member-0.0.1-SNAPSHOT.jar app.jar
 RUN wget -O /opt/dd-java-agent.jar https://dtdg.co/latest-java-tracer
 
 # Datadog Java APM 에이전트와 함께 애플리케이션 시작
-CMD ["java", "-javaagent:/opt/dd-java-agent.jar", "-Ddd.agent.host=datadog-agent", "-Ddd.trace.agent.port=8126", "-jar", "app.jar", "--spring.profiles.active=prod"]
+CMD ["java", "-javaagent:/opt/dd-java-agent.jar", "-Ddd.agent.host=localhost", "-Ddd.trace.agent.port=8126", "-jar", "app.jar", "--spring.profiles.active=prod"]
