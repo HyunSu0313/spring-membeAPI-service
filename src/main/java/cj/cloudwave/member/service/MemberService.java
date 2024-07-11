@@ -1,10 +1,8 @@
 package cj.cloudwave.member.service;
 
 import cj.cloudwave.member.domain.Member;
-import cj.cloudwave.member.domain.MemberGrade;
 import cj.cloudwave.member.dto.LoginDto;
 import cj.cloudwave.member.dto.MemberDto;
-import cj.cloudwave.member.exception.IdDuplicateException;
 import cj.cloudwave.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,6 +14,7 @@ public class MemberService {
 
     private final MemberRepository memberRepository;
 
+    @Transactional
     public void registerMember(MemberDto memberDto) {
         // 중복된 이메일로 회원 가입 불가
         if (memberRepository.existsByEmail(memberDto.getEmail())) {
@@ -32,6 +31,7 @@ public class MemberService {
         memberRepository.save(member);
     }
 
+    @Transactional(readOnly = true)
     public Member authenticate(LoginDto loginDto) {
         Member member = memberRepository.findByEmail(loginDto.getEmail())
                 .orElse(null);
