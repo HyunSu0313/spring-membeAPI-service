@@ -19,10 +19,7 @@ public class ProdWebConfig implements WebMvcConfigurer {
                         "X-Amz-Date",
                         "Authorization",
                         "X-Api-Key",
-                        "X-Amz-Security-Token",
-                        "Origin",            // Origin 헤더 추가
-                        "Sec-Fetch-Mode",    // Sec-Fetch-Mode 헤더 추가
-                        "Sec-Fetch-Site"     // Sec-Fetch-Site 헤더 추가
+                        "X-Amz-Security-Token"
                 )
                 .allowCredentials(true);
     }
