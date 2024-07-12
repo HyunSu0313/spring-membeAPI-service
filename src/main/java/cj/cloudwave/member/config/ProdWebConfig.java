@@ -12,7 +12,7 @@ public class ProdWebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("https://df1a808cqvuv2.cloudfront.net") // CloudFront Origin으로 변경
+                .allowedOrigins("https://dk40dxm0n2zbz.cloudfront.net") // CloudFront Origin으로 변경
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders(
                         "Content-Type",
