@@ -38,10 +38,9 @@ jobs:
       - name: Build and push Docker image
         env:
           ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
-          IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build -t $ECR_REPOSITORY_URI:$IMAGE_TAG .
-          docker push $ECR_REPOSITORY_URI:$IMAGE_TAG
+          docker build -t $ECR_REPOSITORY_URI:latest .
+          docker push $ECR_REPOSITORY_URI:latest
 
       - name: Describe ECS task definition
         id: describe-task
@@ -55,11 +54,10 @@ jobs:
       - name: Update ECS task definition
         env:
           ECR_REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URI }}
-          IMAGE_TAG: ${{ github.sha }}
           ECS_TASK_DEFINITION_NAME: ${{ secrets.ECS_TASK_DEFINITION_NAME }}
         run: |
           # Update the image URI for jhs-member-service container
-          jq --arg member_service_uri "$ECR_REPOSITORY_URI:$IMAGE_TAG" \
+          jq --arg member_service_uri "$ECR_REPOSITORY_URI:latest" \
              '(.containerDefinitions[] | select(.name == "jhs-member-service").image) |= $member_service_uri' \
              filtered-task-definition.json > updated-task-definition.json
 
